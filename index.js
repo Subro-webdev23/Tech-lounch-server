@@ -98,6 +98,23 @@ async function run() {
                 res.status(500).send({ message: 'Internal Server Error' });
             }
         });
+        // Products report
+        app.patch("/products/:id/report", async (req, res) => {
+            const id = req.params.id;
+
+            try {
+                const result = await postsCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    { $set: { isReported: true } }
+                );
+
+                res.send(result);
+            } catch (err) {
+                console.error("Error reporting product:", err);
+                res.status(500).send({ message: "Internal Server Error" });
+            }
+        });
+
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
