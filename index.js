@@ -116,7 +116,7 @@ async function run() {
         });
         // Reviews 
         app.post('/reviews', async (req, res) => {
-            const { productId, userEmail, userName, userImage, rating, createdAt } = req.body;
+            const { productId, userEmail, userName, userImage, description, rating, createdAt } = req.body;
 
             if (!productId || !userEmail || !userName || !rating) {
                 return res.status(400).send({ message: "Missing required review fields" });
@@ -128,6 +128,7 @@ async function run() {
                     userEmail,
                     userName,
                     userImage,
+                    description,
                     rating,
                     createdAt: createdAt || new Date(),
                 });
@@ -135,6 +136,18 @@ async function run() {
                 res.send(result);
             } catch (error) {
                 console.error("Error inserting review:", error);
+                res.status(500).send({ message: "Internal Server Error" });
+            }
+        });
+        // Get reviews by product ID
+        app.get('/reviews/:productId', async (req, res) => {
+            const productId = req.params.productId;
+
+            try {
+                const reviews = await reviewsCollection.find({ productId: new ObjectId(productId) }).toArray();
+                res.send(reviews);
+            } catch (error) {
+                console.error("Error fetching reviews:", error);
                 res.status(500).send({ message: "Internal Server Error" });
             }
         });
