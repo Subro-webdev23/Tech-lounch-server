@@ -1,7 +1,7 @@
 const express = require('express')
 const app = express()
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 3000;
 
 
@@ -25,6 +25,7 @@ async function run() {
         await client.connect();
         const usersCollection = client.db('assignment-12').collection('users');
         const postsCollection = client.db('assignment-12').collection('posts');
+        const reportsCollection = client.db('assignment-12').collection('reports');
 
         // create a user
         app.post('/users', async (req, res) => {
@@ -44,6 +45,8 @@ async function run() {
             const users = await usersCollection.find().toArray();
             res.send(users);
         });
+
+
         //  Add Product
         app.post('/addProducts', async (req, res) => {
             const product = req.body;
@@ -54,6 +57,46 @@ async function run() {
         app.get('/products', async (req, res) => {
             const products = await postsCollection.find().toArray();
             res.send(products);
+        });
+        // Get products by Id
+        app.get('/products/:id', async (req, res) => {
+            const id = req.params.id;
+            const product = await postsCollection.findOne({ _id: new ObjectId(id) });
+            res.send(product);
+        });
+        // 
+        app.patch('/products/:id/upvote', async (req, res) => {
+            const id = req.params.id;
+            const email = req.body.email; // ✅ Make sure you're sending this
+
+            if (!email) {
+                return res.status(400).send({ message: 'Email is required for voting.' });
+            }
+
+            try {
+                const product = await postsCollection.findOne({ _id: new ObjectId(id) });
+
+                if (!product) {
+                    return res.status(404).send({ message: 'Product not found' });
+                }
+
+                if (product.voters?.includes(email)) {
+                    return res.status(400).send({ message: 'Already voted.' });
+                }
+
+                const result = await postsCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    {
+                        $inc: { upvotes: 1 },
+                        $addToSet: { voters: email }
+                    }
+                );
+
+                res.send(result);
+            } catch (error) {
+                console.error("Error during upvote:", error);
+                res.status(500).send({ message: 'Internal Server Error' });
+            }
         });
 
         // Send a ping to confirm a successful connection
