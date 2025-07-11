@@ -25,7 +25,7 @@ async function run() {
         await client.connect();
         const usersCollection = client.db('assignment-12').collection('users');
         const postsCollection = client.db('assignment-12').collection('posts');
-        const reportsCollection = client.db('assignment-12').collection('reports');
+        const reviewsCollection = client.db('assignment-12').collection('reviews');
 
         // create a user
         app.post('/users', async (req, res) => {
@@ -114,6 +114,31 @@ async function run() {
                 res.status(500).send({ message: "Internal Server Error" });
             }
         });
+        // Reviews 
+        app.post('/reviews', async (req, res) => {
+            const { productId, userEmail, userName, userImage, rating, createdAt } = req.body;
+
+            if (!productId || !userEmail || !userName || !rating) {
+                return res.status(400).send({ message: "Missing required review fields" });
+            }
+
+            try {
+                const result = await reviewsCollection.insertOne({
+                    productId: new ObjectId(productId),
+                    userEmail,
+                    userName,
+                    userImage,
+                    rating,
+                    createdAt: createdAt || new Date(),
+                });
+
+                res.send(result);
+            } catch (error) {
+                console.error("Error inserting review:", error);
+                res.status(500).send({ message: "Internal Server Error" });
+            }
+        });
+
 
 
         // Send a ping to confirm a successful connection
