@@ -228,6 +228,24 @@ async function run() {
                 res.status(500).send({ success: false, message: 'Server error while deleting product' });
             }
         });
+        // PATCH: Update a Product by Status
+        app.patch('/posts/:id', async (req, res) => {
+            const id = req.params.id;
+            const { isFeatured } = req.body;
+
+            try {
+                const result = await postsCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    { $set: { isFeatured } }
+                );
+
+                res.send(result);
+            } catch (error) {
+                console.error("Error updating status:", error);
+                res.status(500).send({ message: "Server error" });
+            }
+        });
+
 
 
         // Send a ping to confirm a successful connection
