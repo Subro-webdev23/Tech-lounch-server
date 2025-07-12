@@ -101,18 +101,30 @@ async function run() {
         // Products report
         app.patch("/products/:id/report", async (req, res) => {
             const id = req.params.id;
+            const email = req.body.email;
 
-            try {
-                const result = await postsCollection.updateOne(
+            const product = await postsCollection.findOne({ _id: new ObjectId(id) });
+
+            let result;
+            let action;
+
+            if (product?.reported?.includes(email)) {
+                // If already reported, pull (unreport)
+                result = await postsCollection.updateOne(
                     { _id: new ObjectId(id) },
-                    { $set: { isReported: true } }
+                    { $pull: { reported: email } }
                 );
-
-                res.send(result);
-            } catch (err) {
-                console.error("Error reporting product:", err);
-                res.status(500).send({ message: "Internal Server Error" });
+                action = "unreported";
+            } else {
+                // Otherwise, push (report)
+                result = await postsCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    { $addToSet: { reported: email } }
+                );
+                action = "reported";
             }
+
+            res.send({ success: true, action });
         });
         // Reviews 
         app.post('/reviews', async (req, res) => {
@@ -152,12 +164,12 @@ async function run() {
                 res.status(500).send({ message: "Internal Server Error" });
             }
         });
-        // Reported products
+        // Reported products to view moderators
         app.get('/reportedProducts', async (req, res) => {
             try {
-                const reportedPosts = await postsCollection
-                    .find({ isReported: true })
-                    .toArray();
+                const reportedPosts = await postsCollection.find({
+                    reported: { $exists: true, $not: { $size: 0 } }
+                }).toArray();
 
                 res.send(reportedPosts);
             } catch (error) {
