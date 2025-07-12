@@ -211,6 +211,23 @@ async function run() {
             }
         });
 
+        // DELETE: Delete a Product by ID
+        app.delete('/posts/:id', async (req, res) => {
+            const id = req.params.id;
+
+            try {
+                const result = await postsCollection.deleteOne({ _id: new ObjectId(id) });
+
+                if (result.deletedCount > 0) {
+                    res.send({ success: true, deletedCount: result.deletedCount });
+                } else {
+                    res.status(404).send({ success: false, message: 'Product not found' });
+                }
+            } catch (error) {
+                console.error("Error deleting product:", error);
+                res.status(500).send({ success: false, message: 'Server error while deleting product' });
+            }
+        });
 
 
         // Send a ping to confirm a successful connection
