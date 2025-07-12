@@ -177,7 +177,7 @@ async function run() {
                 res.status(500).send({ message: "Internal Server Error" });
             }
         });
-        // usser role update
+        // user role update
         app.patch('/users/:id/role', async (req, res) => {
             const { id } = req.params;
             const { role } = req.body;
@@ -186,6 +186,29 @@ async function run() {
                 { $set: { role } }
             );
             res.send(result);
+        });
+        // GET: Get user role by email
+        app.get('/users/:email/role', async (req, res) => {
+            try {
+                const email = req.params.email;
+
+                if (!email) {
+                    return res.status(400).send({ message: 'Email is required' });
+                }
+
+                const user = await usersCollection.findOne({
+                    email: email
+                });
+
+                if (!user) {
+                    return res.status(404).send({ message: 'User not found' });
+                }
+
+                res.send({ role: user.role || 'user' });
+            } catch (error) {
+                console.error('Error getting user role:', error);
+                res.status(500).send({ message: 'Failed to get role' });
+            }
         });
 
 
