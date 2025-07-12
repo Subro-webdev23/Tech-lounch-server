@@ -139,6 +139,7 @@ async function run() {
                 res.status(500).send({ message: "Internal Server Error" });
             }
         });
+
         // Get reviews by product ID
         app.get('/reviews/:productId', async (req, res) => {
             const productId = req.params.productId;
@@ -150,6 +151,29 @@ async function run() {
                 console.error("Error fetching reviews:", error);
                 res.status(500).send({ message: "Internal Server Error" });
             }
+        });
+        // Reported products
+        app.get('/reportedProducts', async (req, res) => {
+            try {
+                const reportedPosts = await postsCollection
+                    .find({ isReported: true })
+                    .toArray();
+
+                res.send(reportedPosts);
+            } catch (error) {
+                console.error("Failed to fetch reported posts:", error);
+                res.status(500).send({ message: "Internal Server Error" });
+            }
+        });
+        // usser role update
+        app.patch('/users/:id/role', async (req, res) => {
+            const { id } = req.params;
+            const { role } = req.body;
+            const result = await usersCollection.updateOne(
+                { _id: new ObjectId(id) },
+                { $set: { role } }
+            );
+            res.send(result);
         });
 
 
