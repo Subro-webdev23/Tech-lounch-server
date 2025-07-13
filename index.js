@@ -76,6 +76,32 @@ async function run() {
                 res.status(500).send({ message: 'Server error' });
             }
         });
+        // 
+        // Update product by ID
+        app.patch('/products/:id', async (req, res) => {
+            const { id } = req.params;
+            const updatedProduct = req.body;
+
+            try {
+                const result = await postsCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    {
+                        $set: {
+                            name: updatedProduct.name,
+                            description: updatedProduct.description,
+                            image: updatedProduct.image,
+                            link: updatedProduct.link,
+                            tags: updatedProduct.tags, // must be an array
+                        }
+                    }
+                );
+
+                res.send(result);
+            } catch (error) {
+                console.error("Error updating product:", error);
+                res.status(500).send({ message: "Failed to update product." });
+            }
+        });
 
         // 
         app.patch('/products/:id/upvote', async (req, res) => {
