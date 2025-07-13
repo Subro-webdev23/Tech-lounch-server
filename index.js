@@ -64,6 +64,19 @@ async function run() {
             const product = await postsCollection.findOne({ _id: new ObjectId(id) });
             res.send(product);
         });
+        // Get products by email
+        app.get('/posts/:email', async (req, res) => {
+            const ownerEmail = req.params.email;
+            const query = { email: ownerEmail };
+
+            try {
+                const products = await postsCollection.find(query).toArray();
+                res.send(products);
+            } catch (error) {
+                res.status(500).send({ message: 'Server error' });
+            }
+        });
+
         // 
         app.patch('/products/:id/upvote', async (req, res) => {
             const id = req.params.id;
@@ -228,7 +241,7 @@ async function run() {
                 res.status(500).send({ success: false, message: 'Server error while deleting product' });
             }
         });
-        // PATCH: Update a Product by Status
+        // PATCH: Update a Product isFeatured Status
         app.patch('/posts/:id', async (req, res) => {
             const id = req.params.id;
             const { isFeatured } = req.body;
@@ -245,6 +258,22 @@ async function run() {
                 res.status(500).send({ message: "Server error" });
             }
         });
+        // PATCH: Update a Product Status
+        app.patch('/productStatus/:id', async (req, res) => {
+            const id = req.params.id;
+            const { status } = req.body;
+            // console.log("Body received:", req.body);
+            try {
+                const result = await postsCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    { $set: { status: status } }
+                );
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ message: "Server error" });
+            }
+        });
+
 
 
 
