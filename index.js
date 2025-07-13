@@ -3,11 +3,20 @@ const app = express()
 const cors = require('cors');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 3000;
+const admin = require("firebase-admin");
 
 
 
 app.use(cors());
 app.use(express.json());
+
+
+
+const serviceAccount = require("./firebase-admin-key.json");
+
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+});
 
 require('dotenv').config();
 const uri = `mongodb+srv://${process.env.USER_DB}:${process.env.USER_PASS}@cluster0.wybojxh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -26,6 +35,28 @@ async function run() {
         const usersCollection = client.db('assignment-12').collection('users');
         const postsCollection = client.db('assignment-12').collection('posts');
         const reviewsCollection = client.db('assignment-12').collection('reviews');
+
+        // Custom middleware 
+        const varifyFBToken = async (req, res, next) => {
+            const authHeaders = req.headers.authorization;
+            if (!authHeaders) {
+                return res.status(401).send({ message: 'Unauthorized access' });
+            }
+            const token = authHeaders.split(' ')[1];
+            if (!token) {
+                return res.status(401).send({ message: 'Unauthorized access' });
+            }
+            try {
+                const decoded = await admin.auth().verifyIdToken(token);
+                req.decoded = decoded;
+                next();
+            } catch (error) {
+                console.error("Firebase token verification error:", error);
+                res.status(403).send({ message: 'forbidden access' });
+            }
+
+
+        }
 
         // create a user
         app.post('/users', async (req, res) => {
@@ -54,7 +85,7 @@ async function run() {
             res.send(result);
         });
         // Get all products
-        app.get('/products', async (req, res) => {
+        app.get('/products', varifyFBToken, async (req, res) => {
             const products = await postsCollection.find().toArray();
             res.send(products);
         });
@@ -65,7 +96,7 @@ async function run() {
             res.send(product);
         });
         // Get products by email
-        app.get('/posts/:email', async (req, res) => {
+        app.get('/posts/:email', varifyFBToken, async (req, res) => {
             const ownerEmail = req.params.email;
             const query = { email: ownerEmail };
 
@@ -192,7 +223,7 @@ async function run() {
         });
 
         // Get reviews by product ID
-        app.get('/reviews/:productId', async (req, res) => {
+        app.get('/reviews/:productId', varifyFBToken, async (req, res) => {
             const productId = req.params.productId;
 
             try {
@@ -204,7 +235,7 @@ async function run() {
             }
         });
         // Reported products to view moderators
-        app.get('/reportedProducts', async (req, res) => {
+        app.get('/reportedProducts', varifyFBToken, async (req, res) => {
             try {
                 const reportedPosts = await postsCollection.find({
                     reported: { $exists: true, $not: { $size: 0 } }
@@ -227,7 +258,7 @@ async function run() {
             res.send(result);
         });
         // GET: Get user role by email
-        app.get('/users/:email/role', async (req, res) => {
+        app.get('/users/:email/role', varifyFBToken, async (req, res) => {
             try {
                 const email = req.params.email;
 
