@@ -102,9 +102,21 @@ async function run() {
             res.send(result);
         });
         // Get all products
-        app.get('/products', varifyFBToken, async (req, res) => {
+        app.get('/products', async (req, res) => {
             const products = await postsCollection.find().toArray();
             res.send(products);
+        });
+        // GET /products?status=accepted
+        app.get('/acceptedProducts', async (req, res) => {
+            const status = req.query.status;
+
+            const query = {};
+            if (status === 'accepted') {
+                query.status = 'accepted';
+            }
+
+            const result = await postsCollection.find(query).toArray();
+            res.send(result);
         });
         // Get products by Id
         app.get('/products/:id', async (req, res) => {
