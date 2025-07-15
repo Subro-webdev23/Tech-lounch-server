@@ -6,6 +6,7 @@ const port = process.env.PORT || 3000;
 const admin = require("firebase-admin");
 require('dotenv').config();
 
+const stripe = require('stripe')(process.env.PAYMENT_GATEWAY_KEY);
 
 app.use(cors());
 app.use(express.json());
@@ -81,8 +82,23 @@ async function run() {
 
         //  Add Product
         app.post('/addProducts', async (req, res) => {
-            const product = req.body;
-            const result = await postsCollection.insertOne(product);
+            const productData = req.body;
+            const email = productData?.email;
+            const user = await usersCollection.findOne({ email });
+            if (!user) {
+                return res.status(403).send({ success: false, message: 'User not found' });
+            }
+            if (!user.subscribed) {
+                const existingProductCount = await postsCollection.countDocuments({ email });
+
+                if (existingProductCount >= 1) {
+                    return res.status(403).send({
+                        success: false,
+                        message: 'You can only add 1 product without subscription.'
+                    });
+                }
+            }
+            const result = await postsCollection.insertOne(productData);
             res.send(result);
         });
         // Get all products
@@ -332,27 +348,76 @@ async function run() {
             }
         });
         // GET: Get user role by email
-        app.get('/users/:email/role', async (req, res) => {
+        // app.get('/users/:email/role', async (req, res) => {
+        //     try {
+        //         const email = req.params.email;
+
+        //         if (!email) {
+        //             return res.status(400).send({ message: 'Email is required' });
+        //         }
+
+        //         const user = await usersCollection.findOne({ email });
+
+        //         if (!user) {
+        //             return res.status(404).send({ message: 'User not found' });
+        //         }
+
+        //         res.send({ role: user.role || 'user' });
+        //     } catch (error) {
+        //         console.error('Error getting user role:', error);
+        //         res.status(500).send({ message: 'Failed to get role' });
+        //     }
+        // });
+        // GET: Get all users by Email
+        app.get('/users/email/:email', async (req, res) => {
+            const email = req.params.email;
             try {
-                const email = req.params.email;
-
-                if (!email) {
-                    return res.status(400).send({ message: 'Email is required' });
-                }
-
                 const user = await usersCollection.findOne({ email });
-
                 if (!user) {
                     return res.status(404).send({ message: 'User not found' });
                 }
-
-                res.send({ role: user.role || 'user' });
+                res.send(user);
             } catch (error) {
-                console.error('Error getting user role:', error);
-                res.status(500).send({ message: 'Failed to get role' });
+                console.error('Error fetching user by email:', error);
+                res.status(500).send({ message: 'Internal Server Error' });
             }
         });
+        // Payment intent
+        app.post('/create-payment-intent', async (req, res) => {
+            const subscriptionInCents = req.body.subscriptionInCents
+            try {
+                const paymentIntent = await stripe.paymentIntents.create({
+                    amount: subscriptionInCents, // Amount in cents
+                    currency: 'usd',
+                    payment_method_types: ['card'],
+                });
 
+                res.json({ clientSecret: paymentIntent.client_secret });
+            } catch (error) {
+                res.status(500).json({ error: error.message });
+            }
+        });
+        // PUT: subscribtion status true
+        app.put('/users/:email/subscription', async (req, res) => {
+            const email = req.params.email;
+            const { subscribed } = req.body;
+
+            try {
+                const result = await usersCollection.updateOne(
+                    { email: email },
+                    { $set: { subscribed } }
+                );
+
+                if (result.modifiedCount > 0) {
+                    res.send({ success: true, message: 'Subscription status updated successfully' });
+                } else {
+                    res.status(404).send({ success: false, message: 'User not found or no changes made' });
+                }
+            } catch (error) {
+                console.error("Error updating subscription status:", error);
+                res.status(500).send({ success: false, message: 'Server error while updating subscription status' });
+            }
+        })
 
 
         // Send a ping to confirm a successful connection
