@@ -62,7 +62,7 @@ async function run() {
 
         // create a user
         app.post('/users', async (req, res) => {
-            console.log("Incoming user data:", req.body);
+            // console.log("Incoming user data:", req.body);
             const email = req.body.email;
             const userExists = await usersCollection.findOne({ email })
             if (userExists) {
@@ -163,7 +163,7 @@ async function run() {
             }
         });
 
-        // 
+        // upvote
         app.patch('/products/:id/upvote', async (req, res) => {
             const id = req.params.id;
             const email = req.body.email; // ✅ Make sure you're sending this
@@ -195,6 +195,34 @@ async function run() {
             } catch (error) {
                 console.error("Error during upvote:", error);
                 res.status(500).send({ message: 'Internal Server Error' });
+            }
+        });
+        // Get featured products
+        app.get('/featuredProducts', async (req, res) => {
+            try {
+                const products = await postsCollection
+                    .find({ isFeatured: true }) // optional: check for featured flag
+                    .sort({ createdAt: -1 }) // 🕓 Latest first
+                    .limit(4)
+                    .toArray();
+
+                res.send(products);
+            } catch (err) {
+                res.status(500).send({ message: 'Failed to load featured products.' });
+            }
+        });
+        // GET /trending-products
+        app.get('/trendingProducts', async (req, res) => {
+            try {
+                const trending = await postsCollection
+                    .find({})
+                    .sort({ upvotes: -1 }) // 🔽 Most voted first
+                    .limit(6)
+                    .toArray();
+
+                res.send(trending);
+            } catch (err) {
+                res.status(500).send({ message: 'Error fetching trending products.' });
             }
         });
         // Products report
@@ -430,6 +458,28 @@ async function run() {
                 res.status(500).send({ success: false, message: 'Server error while updating subscription status' });
             }
         })
+        // admin Dashboard
+        app.get('/site-stats', async (req, res) => {
+            try {
+                const totalUsers = await usersCollection.countDocuments();
+                const totalReviews = await reviewsCollection.countDocuments();
+                const totalProducts = await postsCollection.countDocuments();
+                const acceptedProducts = await postsCollection.countDocuments({ status: 'accepted' });
+                const pendingProducts = await postsCollection.countDocuments({ status: 'pending' });
+
+                res.send({
+                    totalUsers,
+                    totalReviews,
+                    totalProducts,
+                    acceptedProducts,
+                    pendingProducts
+                });
+            } catch (error) {
+                res.status(500).send({ error: 'Failed to load stats' });
+            }
+        });
+
+
 
 
         // Send a ping to confirm a successful connection
