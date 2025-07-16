@@ -484,7 +484,7 @@ async function run() {
         });
 
         //  Add a coupon
-        app.post('/coupons', async (req, res) => {
+        app.post('/coupons', varifyFBToken, async (req, res) => {
             try {
                 const { code, expiry, description, discount } = req.body;
                 const newCoupon = {
@@ -501,7 +501,7 @@ async function run() {
             }
         });
         // 📄 Get all coupons
-        app.get('/coupons', async (req, res) => {
+        app.get('/coupons', varifyFBToken, async (req, res) => {
             try {
                 const coupons = await couponsCollection.find().sort({ createdAt: -1 }).toArray();
                 res.send(coupons);
@@ -511,7 +511,7 @@ async function run() {
         });
 
         // 🗑️ Delete a coupon
-        app.delete('/coupons/:id', async (req, res) => {
+        app.delete('/coupons/:id', varifyFBToken, async (req, res) => {
             try {
                 const id = req.params.id;
                 const result = await couponsCollection.deleteOne({ _id: new ObjectId(id) });
