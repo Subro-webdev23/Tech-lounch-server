@@ -37,6 +37,8 @@ async function run() {
         const usersCollection = client.db('assignment-12').collection('users');
         const postsCollection = client.db('assignment-12').collection('posts');
         const reviewsCollection = client.db('assignment-12').collection('reviews');
+        const couponsCollection = client.db('assignment-12').collection('coupons');
+
 
         // Custom middleware 
         const varifyFBToken = async (req, res, next) => {
@@ -45,6 +47,8 @@ async function run() {
                 return res.status(401).send({ message: 'Unauthorized access' });
             }
             const token = authHeaders.split(' ')[1];
+            // console.log("Token received:", token);
+
             if (!token) {
                 return res.status(401).send({ message: 'Unauthorized access' });
             }
@@ -81,7 +85,7 @@ async function run() {
 
 
         //  Add Product
-        app.post('/addProducts', async (req, res) => {
+        app.post('/addProducts', varifyFBToken, async (req, res) => {
             const productData = req.body;
             const email = productData?.email;
             const user = await usersCollection.findOne({ email });
@@ -119,7 +123,7 @@ async function run() {
             res.send(result);
         });
         // Get products by Id
-        app.get('/products/:id', async (req, res) => {
+        app.get('/products/:id', varifyFBToken, async (req, res) => {
             const id = req.params.id;
             const product = await postsCollection.findOne({ _id: new ObjectId(id) });
             res.send(product);
@@ -138,7 +142,7 @@ async function run() {
         });
         // 
         // Update product by ID
-        app.patch('/products/:id', async (req, res) => {
+        app.patch('/products/:id', varifyFBToken, async (req, res) => {
             const { id } = req.params;
             const updatedProduct = req.body;
 
@@ -164,7 +168,7 @@ async function run() {
         });
 
         // upvote
-        app.patch('/products/:id/upvote', async (req, res) => {
+        app.patch('/products/:id/upvote', varifyFBToken, async (req, res) => {
             const id = req.params.id;
             const email = req.body.email; // ✅ Make sure you're sending this
 
@@ -226,7 +230,7 @@ async function run() {
             }
         });
         // Products report
-        app.patch("/products/:id/report", async (req, res) => {
+        app.patch("/products/:id/report", varifyFBToken, async (req, res) => {
             const id = req.params.id;
             const email = req.body.email;
 
@@ -254,7 +258,7 @@ async function run() {
             res.send({ success: true, action });
         });
         // Reviews 
-        app.post('/reviews', async (req, res) => {
+        app.post('/reviews', varifyFBToken, async (req, res) => {
             const { productId, userEmail, userName, userImage, description, rating, createdAt } = req.body;
 
             if (!productId || !userEmail || !userName || !rating) {
@@ -305,7 +309,7 @@ async function run() {
             }
         });
         // user role update
-        app.patch('/users/:id/role', async (req, res) => {
+        app.patch('/users/:id/role', varifyFBToken, async (req, res) => {
             const { id } = req.params;
             const { role } = req.body;
             const result = await usersCollection.updateOne(
@@ -339,7 +343,7 @@ async function run() {
         });
 
         // DELETE: Delete a Product by ID
-        app.delete('/posts/:id', async (req, res) => {
+        app.delete('/posts/:id', varifyFBToken, async (req, res) => {
             const id = req.params.id;
 
             try {
@@ -356,7 +360,7 @@ async function run() {
             }
         });
         // PATCH: Update a Product isFeatured Status
-        app.patch('/posts/:id', async (req, res) => {
+        app.patch('/posts/:id', varifyFBToken, async (req, res) => {
             const id = req.params.id;
             const { isFeatured } = req.body;
 
@@ -373,7 +377,7 @@ async function run() {
             }
         });
         // PATCH: Update a Product Status
-        app.patch('/productStatus/:id', async (req, res) => {
+        app.patch('/productStatus/:id', varifyFBToken, async (req, res) => {
             const id = req.params.id;
             const { status } = req.body;
             // console.log("Body received:", req.body);
@@ -409,7 +413,7 @@ async function run() {
         //     }
         // });
         // GET: Get all users by Email
-        app.get('/users/email/:email', async (req, res) => {
+        app.get('/users/email/:email', varifyFBToken, async (req, res) => {
             const email = req.params.email;
             try {
                 const user = await usersCollection.findOne({ email });
@@ -423,7 +427,7 @@ async function run() {
             }
         });
         // Payment intent
-        app.post('/create-payment-intent', async (req, res) => {
+        app.post('/create-payment-intent', varifyFBToken, async (req, res) => {
             const subscriptionInCents = req.body.subscriptionInCents
             try {
                 const paymentIntent = await stripe.paymentIntents.create({
@@ -438,7 +442,7 @@ async function run() {
             }
         });
         // PUT: subscribtion status true
-        app.put('/users/:email/subscription', async (req, res) => {
+        app.put('/users/:email/subscription', varifyFBToken, async (req, res) => {
             const email = req.params.email;
             const { subscribed } = req.body;
 
@@ -459,7 +463,7 @@ async function run() {
             }
         })
         // admin Dashboard
-        app.get('/site-stats', async (req, res) => {
+        app.get('/site-stats', varifyFBToken, async (req, res) => {
             try {
                 const totalUsers = await usersCollection.countDocuments();
                 const totalReviews = await reviewsCollection.countDocuments();
@@ -478,6 +482,45 @@ async function run() {
                 res.status(500).send({ error: 'Failed to load stats' });
             }
         });
+
+        //  Add a coupon
+        app.post('/coupons', async (req, res) => {
+            try {
+                const { code, expiry, description, discount } = req.body;
+                const newCoupon = {
+                    code,
+                    expiry: new Date(expiry),
+                    description,
+                    discount: parseFloat(discount),
+                    createdAt: new Date(),
+                };
+                const result = await couponsCollection.insertOne(newCoupon);
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ error: 'Failed to add coupon' });
+            }
+        });
+        // 📄 Get all coupons
+        app.get('/coupons', async (req, res) => {
+            try {
+                const coupons = await couponsCollection.find().sort({ createdAt: -1 }).toArray();
+                res.send(coupons);
+            } catch (error) {
+                res.status(500).send({ error: 'Failed to fetch coupons' });
+            }
+        });
+
+        // 🗑️ Delete a coupon
+        app.delete('/coupons/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+                const result = await couponsCollection.deleteOne({ _id: new ObjectId(id) });
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ error: 'Failed to delete coupon' });
+            }
+        });
+        // 
 
 
 
