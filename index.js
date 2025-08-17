@@ -85,7 +85,7 @@ async function run() {
 
 
         //  Add Product
-        app.post('/addProducts', async (req, res) => {
+        app.post('/addProducts', varifyFBToken, async (req, res) => {
             const productData = req.body;
             const email = productData?.email;
             const user = await usersCollection.findOne({ email });
@@ -123,13 +123,13 @@ async function run() {
             res.send(result);
         });
         // Get products by Id
-        app.get('/products/:id', async (req, res) => {
+        app.get('/products/:id', varifyFBToken, async (req, res) => {
             const id = req.params.id;
             const product = await postsCollection.findOne({ _id: new ObjectId(id) });
             res.send(product);
         });
         // Get products by email
-        app.get('/posts/:email', async (req, res) => {
+        app.get('/posts/:email', varifyFBToken, async (req, res) => {
             const ownerEmail = req.params.email;
             const query = { email: ownerEmail };
 
@@ -142,7 +142,7 @@ async function run() {
         });
         // 
         // Update product by ID
-        app.patch('/products/:id', async (req, res) => {
+        app.patch('/products/:id', varifyFBToken, async (req, res) => {
             const { id } = req.params;
             const updatedProduct = req.body;
 
@@ -168,7 +168,7 @@ async function run() {
         });
 
         // upvote
-        app.patch('/products/:id/upvote', async (req, res) => {
+        app.patch('/products/:id/upvote', varifyFBToken, async (req, res) => {
             const id = req.params.id;
             const email = req.body.email; // ✅ Make sure you're sending this
 
@@ -230,7 +230,7 @@ async function run() {
             }
         });
         // Products report
-        app.patch("/products/:id/report", async (req, res) => {
+        app.patch("/products/:id/report", varifyFBToken, async (req, res) => {
             const id = req.params.id;
             const email = req.body.email;
 
@@ -258,7 +258,7 @@ async function run() {
             res.send({ success: true, action });
         });
         // Reviews 
-        app.post('/reviews', async (req, res) => {
+        app.post('/reviews', varifyFBToken, async (req, res) => {
             const { productId, userEmail, userName, userImage, description, rating, createdAt } = req.body;
 
             if (!productId || !userEmail || !userName || !rating) {
@@ -284,7 +284,7 @@ async function run() {
         });
 
         // Get reviews by product ID
-        app.get('/reviews/:productId', async (req, res) => {
+        app.get('/reviews/:productId', varifyFBToken, async (req, res) => {
             const productId = req.params.productId;
 
             try {
@@ -296,7 +296,7 @@ async function run() {
             }
         });
         // Reported products to view moderators
-        app.get('/reportedProducts', async (req, res) => {
+        app.get('/reportedProducts', varifyFBToken, async (req, res) => {
             try {
                 const reportedPosts = await postsCollection.find({
                     reported: { $exists: true, $not: { $size: 0 } }
@@ -309,7 +309,7 @@ async function run() {
             }
         });
         // user role update
-        app.patch('/users/:id/role', async (req, res) => {
+        app.patch('/users/:id/role', varifyFBToken, async (req, res) => {
             const { id } = req.params;
             const { role } = req.body;
             const result = await usersCollection.updateOne(
@@ -319,7 +319,7 @@ async function run() {
             res.send(result);
         });
         // GET: Get user role by email
-        app.get('/users/:email/role', async (req, res) => {
+        app.get('/users/:email/role', varifyFBToken, async (req, res) => {
             try {
                 const email = req.params.email;
 
@@ -343,7 +343,7 @@ async function run() {
         });
 
         // DELETE: Delete a Product by ID
-        app.delete('/posts/:id', async (req, res) => {
+        app.delete('/posts/:id', varifyFBToken, async (req, res) => {
             const id = req.params.id;
 
             try {
@@ -360,7 +360,7 @@ async function run() {
             }
         });
         // PATCH: Update a Product isFeatured Status
-        app.patch('/posts/:id', async (req, res) => {
+        app.patch('/posts/:id', varifyFBToken, async (req, res) => {
             const id = req.params.id;
             const { isFeatured } = req.body;
 
@@ -377,7 +377,7 @@ async function run() {
             }
         });
         // PATCH: Update a Product Status
-        app.patch('/productStatus/:id', async (req, res) => {
+        app.patch('/productStatus/:id', varifyFBToken, async (req, res) => {
             const id = req.params.id;
             const { status } = req.body;
             // console.log("Body received:", req.body);
@@ -413,7 +413,7 @@ async function run() {
         //     }
         // });
         // GET: Get all users by Email
-        app.get('/users/email/:email', async (req, res) => {
+        app.get('/users/email/:email', varifyFBToken, async (req, res) => {
             const email = req.params.email;
             try {
                 const user = await usersCollection.findOne({ email });
@@ -427,7 +427,7 @@ async function run() {
             }
         });
         // Payment intent
-        app.post('/create-payment-intent', async (req, res) => {
+        app.post('/create-payment-intent', varifyFBToken, async (req, res) => {
             const subscriptionInCents = req.body.subscriptionInCents
             try {
                 const paymentIntent = await stripe.paymentIntents.create({
@@ -442,7 +442,7 @@ async function run() {
             }
         });
         // PUT: subscribtion status true
-        app.put('/users/:email/subscription', async (req, res) => {
+        app.put('/users/:email/subscription', varifyFBToken, async (req, res) => {
             const email = req.params.email;
             const { subscribed } = req.body;
 
@@ -463,7 +463,7 @@ async function run() {
             }
         })
         // admin Dashboard
-        app.get('/site-stats', async (req, res) => {
+        app.get('/site-stats', varifyFBToken, async (req, res) => {
             try {
                 const totalUsers = await usersCollection.countDocuments();
                 const totalReviews = await reviewsCollection.countDocuments();
@@ -484,7 +484,7 @@ async function run() {
         });
 
         //  Add a coupon
-        app.post('/coupons', async (req, res) => {
+        app.post('/coupons', varifyFBToken, async (req, res) => {
             try {
                 const { code, expiry, description, discount } = req.body;
                 const newCoupon = {
@@ -511,7 +511,7 @@ async function run() {
         });
 
         // 🗑️ Delete a coupon
-        app.delete('/coupons/:id', async (req, res) => {
+        app.delete('/coupons/:id', varifyFBToken, async (req, res) => {
             try {
                 const id = req.params.id;
                 const result = await couponsCollection.deleteOne({ _id: new ObjectId(id) });
